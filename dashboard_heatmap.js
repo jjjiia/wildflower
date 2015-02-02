@@ -2,8 +2,11 @@ var config = {
 	timeline:{
 		timer:null,
 		width:1000,
+		height:100,
 		margin:20,
-		xScale:d3.scale.linear().domain([0,180]).range([20,980])
+		xScale:d3.scale.linear().domain([0,2000]).range([20,980]),
+		barWidth:10,
+		sliderWidth:20
 	}
 }
 var global = {
@@ -37,28 +40,39 @@ var heatmapInstance = h337.create({
 function dataDidLoad(error,data1,data2,data3,data4) {
 	//make new data object and add different files(paths) to it
 	$("#timeline-controls .stop").hide()
-
+	initTimeLine()
+	
 	var allInterval = data1.values.length-1
 	var allData = {}
-	allInOneInterval = formatData(data1,allData,data1.values.length-1)
-	allInOneInterval = formatData(data2,allData,data2.values.length-1)
-	allInOneInterval = formatData(data3,allData,data3.values.length-1)
 	
+	var joinedData = data1.values.concat(data2.values)
+	var currentData = table.filter(table.group(joinedData,["frame"]),function(list,frame){
+		frame = parseInt(frame)
+		return(frame >= 0 && frame <= allInterval )
+	})
+	global.data = currentData
+	
+	
+	allInOneInterval = formatData(currentData,allData,allInterval-1)
+	allInOneInterval = formatData(data2,allData,data2.values.length-1)
+	//allInOneInterval = formatData(data3,allData,data3.values.length-1)
 	//console.log(allData)
 	heatmapInstance.setData(allInOneInterval[0]);
-
+	
+	
+	
 
 	var newData = {}
+	//interval is preset but also changes with timeline dragging?
 	var interval = 1000
-	var start = 0
-	var end = 1800
-		data =formatData(data1,newData,interval)
-		data =formatData(data2,newData,interval)
-		data =formatData(data3,newData,interval)
-	//data =formatData(data4,newData,interval)
-	animate(data)
+//	var start = 0
+//	var end = 1800
+//		data =formatData(data1,newData,interval)
+//		data =formatData(data2,newData,interval)
+//		data =formatData(data3,newData,interval)
+	animationData =formatData(joinedData,newData,interval)
+	animate(animationData)
 }
-
 
 var utils = {
 range: function(start, end) {
@@ -71,7 +85,6 @@ range: function(start, end) {
 	return data
 }
 }
-
 var table = {
 	group: function(rows, fields) {
 		var view = {}
@@ -114,33 +127,38 @@ var table = {
 		return data
 	}
 }
-
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
 
 function formatData(data, newData,interval){
 	var interval = interval
-	var totalLength = data.values.length
+	var totalLength = Object.size(data)
 	//console.log(totalLength)
-	var data = table.group(data.values,["frame"])
+	//var data = table.group(data,["frame"])
 	//console.log(data)
 	for(var frame = 0; frame + interval < totalLength; frame++){
 		
 		if(newData[frame]==undefined){
 			newData[frame] = {}
+		//	console.log(newData[frame])
 			newData[frame]["data"]=[]
-			//console.log(newData)
+		//	console.log(newData)
 			var existingCoordinates = []
 			for(var i =1; i < interval; i++){
 				var currentFrame = parseInt(frame)+i
 				//console.log(data[20])
-				var x = data[currentFrame][0].x
-				var y = data[currentFrame][0].y
-				
+				var x = data[currentFrame].x
+				var y = data[currentFrame].y
 				newData[frame]["data"].push({"x":x, "y":y})
 			}
 		}else{
 			for(var i =1; i < interval; i++){
 				var currentFrame = parseInt(frame)+i
-				//console.log(data[20])
 				var x = data[currentFrame][0].x
 				var y = data[currentFrame][0].y
 				newData[frame]["data"].push({"x":x, "y":y})
@@ -148,26 +166,25 @@ function formatData(data, newData,interval){
 		}
 	}
 	//console.log(newData)
-//	jQuery.each(data,function(i,d){
-//			d["min"] = 0
-//			d["max"] = 100
-//			if(newData[frame] == undefined){
-//				newData[frame]={}
-//				newData[frame]["data"] = []
-//				newData[frame]["data"].push({"x":d.x, "y":d.y, "max":10,"min":0})
-//			}else{
-//				newData[frame]["data"].push({"x":d.x, "y":d.y,"max":10,"min":0})
-//			}
-//			
-//			if(i%interval == 0){
-//				frame +=1
-//			}
-//			
-//			d["data"] = [{"x":d.x, "y":d.y,"value":d.value}]
-//			//console.log(d)
-//	
-//	})
-//	console.log(newData)
+	//	jQuery.each(data,function(i,d){
+	//			d["min"] = 0
+	//			d["max"] = 100
+	//			if(newData[frame] == undefined){
+	//				newData[frame]={}
+	//				newData[frame]["data"] = []
+	//				newData[frame]["data"].push({"x":d.x, "y":d.y, "max":10,"min":0})
+	//			}else{
+	//				newData[frame]["data"].push({"x":d.x, "y":d.y,"max":10,"min":0})
+	//			}
+	//			
+	//			if(i%interval == 0){
+	//				frame +=1
+	//			}
+	//			
+	//			d["data"] = [{"x":d.x, "y":d.y,"value":d.value}]
+	//			//console.log(d)
+	//	
+	//	})
 	return newData
 }
 
@@ -179,32 +196,187 @@ function objectSize(obj) {
     return size;
 };
 
-var i = 0
-
 function timelineControlStop() {
 	$("#timeline-controls .play").show()
 	$("#timeline-controls .stop").hide()
 	clearInterval(config.timer)
 }
 
+function initTimeLine(){
+	var height = config.timeline.height-100
+	var width = config.timeline.width
+	var margin =  config.timeline.margin
+	
+	var timeline = d3.select("#timeline").append("svg").attr("width",width)
+	var xScale = config.timeline.xScale
+	
+	var xAxis = d3.svg.axis().scale(xScale).tickSize(1).ticks(16).tickFormat(d3.format("d"))
+
+	timeline.append("g")
+		//.attr("transform", "translate(0," + (height) + ")")
+		.call(xAxis);
+	
+	var timelineBar = timeline
+		.append("rect")
+		.attr("class", "timeline-item")
+	    .attr("x", 20)
+		.attr("y", 20)
+		.attr("width",width)
+		.attr("height", 20)
+		.attr("fill","#eee")
+		
+	var slider = timeline.append("rect")
+		.attr("class", "slider")
+		.attr("x", 20)
+		.attr("y", 20)
+		.attr("width", width)
+		.attr("height", 20)
+		.attr("fill", "#000")
+		.attr("opacity", 0.8)
+		.call(d3.behavior.drag()
+			.on("dragstart", function() {
+				d3.event.sourceEvent.stopPropagation();
+				d3.select(this).property("drag-offset-x", d3.event.sourceEvent.x - this.getBoundingClientRect().left)
+			})
+			.on("drag", function(d, e) {
+				timelineControlStop()
+
+				var x = d3.event.x - d3.select(this).property("drag-offset-x")
+				var w = parseFloat(d3.select(this).attr("width"))
+
+				if(x <= 20) {
+					x = 20
+				}
+
+				if((x + w) >= width) {
+					x = width - w
+				}
+				d3.select(this).attr("x", x)
+				updateHandleLocations()
+				//TODO:updateMaps()
+				updateHeatmap()
+			})
+		)
+	var leftHandle = timeline.append("rect")
+		.attr("class", "handle-left")
+		.attr("x", 20)
+		.attr("y", 20)
+		.attr("width", 10)
+		.attr("height", 20)
+		.attr("fill", "#E1883B")
+		.attr("opacity", 0.3)
+		.call(d3.behavior.drag()
+			.on("dragstart", function() {
+				d3.event.sourceEvent.stopPropagation();
+			})
+			.on("drag", function() {
+				timelineControlStop()
+
+				var x = d3.event.x - (d3.select(this).attr("width") / 2)
+				if(x <= 20) {
+					x = 20
+				}
+				if(x >= rightHandlePosition()) {
+					x = rightHandlePosition()
+				}
+				d3.select(this).attr("x", x)
+				updateSliderLocation()
+				//TODO:updateMaps()
+				updateHeatmap()
+			})
+		)
+	var rightHandle = timeline.append("rect")
+		.attr("class", "handle-right")
+		.attr("x", width-10)
+		.attr("y", 20)
+		.attr("width", 10)
+		.attr("height", 20)
+		.attr("fill", "#E1883B")
+		.attr("opacity", 0.3)
+		.call(d3.behavior.drag()
+			.on("dragstart", function() {
+				d3.event.sourceEvent.stopPropagation();
+			})
+			.on("drag", function() {
+				timelineControlStop()
+
+				var x = d3.event.x - (d3.select(this).attr("width") / 2)
+
+				if(x <= leftHandlePosition()) {
+					x = leftHandlePosition()
+				}
+
+				if(x >= width) {
+					x = width
+				}
+
+				d3.select(this).attr("x", x)
+				updateSliderLocation()
+				//TODO: updateMaps()
+				updateHeatmap()
+			})
+		)
+		
+}
+function leftHandlePosition() {
+	return parseFloat(d3.select("#timeline").select(".handle-left").attr("x"))
+}
+function rightHandlePosition() {
+	return parseFloat(d3.select("#timeline").select(".handle-right").attr("x"))
+}
+function updateSliderLocation() {
+	var startX = leftHandlePosition()
+	var endX = rightHandlePosition()
+	var slider = d3.select("#timeline .slider")
+	slider.attr("width", endX - startX)
+	slider.attr("x", startX)
+	
+}
+function updateHandleLocations() {
+	var leftHandle = d3.select("#timeline .handle-left")
+	var rightHandle = d3.select("#timeline .handle-right")
+
+	var slider = d3.select("#timeline .slider")
+	var startX = parseFloat(slider.attr("x")) - config.timeline.barWidth
+	var endX = parseFloat(slider.attr("x")) + parseFloat(slider.attr("width"))
+
+	leftHandle.attr("x", startX)
+	rightHandle.attr("x", endX)
+}
+
+var  animationAtFrame = 0
 function animate(data) {
 	var size = objectSize(data);
 	$("#timeline-controls .play").click(function() {
 		$("#timeline-controls .play").hide()
 		$("#timeline-controls .stop").show()
 		config.timer = setInterval(function(){
-			 i +=1
-			 heatmapInstance.setData(data[i]);
-			 if(i==size-1){
+			 animationAtFrame +=1
+			 heatmapInstance.setData(data[animationAtFrame]);
+			 if(animationAtFrame==size-1){
 			 	console.log("stop")
 				 timelineControlStop()
 			 }
-			 
-		 }, 3);
+		 }, 20);
 		 
-		 if(i == size){
+		 if(animationAtFrame == size){
 			 timelineControlStop
 		 }
   $("#timeline-controls .stop").click(timelineControlStop)
 })
+}
+function updateHeatmap(){
+	var xScale = config.timeline.xScale
+	var startFrame = Math.floor(xScale.invert(leftHandlePosition()))
+	var endFrame = Math.floor(xScale.invert(rightHandlePosition()))
+	var data = global.data
+	var currentData = table.filter(table.group(data,["frame"]),function(list,frame){
+		//console.log([frame,startFrame,endFrame])
+		frame = parseInt(frame)
+		return(frame >= startFrame && frame <=endFrame)
+	})
+	var newData = {}
+	var interval = endFrame - startFrame
+	var currentData = formatData(currentData,newData,interval)
+	heatmapInstance.setData(currentData[0]);
 }
