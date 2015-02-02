@@ -231,8 +231,8 @@ function initTimeLine(){
 		.attr("y", 20)
 		.attr("width", width)
 		.attr("height", 20)
-		.attr("fill", "#000")
-		.attr("opacity", 0.8)
+		.attr("fill", "#fff")
+		.attr("opacity", 0.1)
 		.call(d3.behavior.drag()
 			.on("dragstart", function() {
 				d3.event.sourceEvent.stopPropagation();
@@ -343,21 +343,39 @@ function updateHandleLocations() {
 	leftHandle.attr("x", startX)
 	rightHandle.attr("x", endX)
 }
+function updateSliderRange(startYear, endYear) {
+	var xScale = config.timeline.xScale
 
-var  animationAtFrame = 0
+	var startX = xScale(startYear)
+	var endX = xScale(endYear)
+
+	var slider = d3.select("#timeline .slider")
+	slider.attr("width", endX - startX)
+	slider.attr("x", startX)
+
+	updateHandleLocations()
+}
+//var  animationAtFrame = 0
 function animate(data) {
 	var size = objectSize(data);
 	$("#timeline-controls .play").click(function() {
 		$("#timeline-controls .play").hide()
 		$("#timeline-controls .stop").show()
+		
+		var animationAtFrame = Math.floor(config.timeline.xScale.invert(leftHandlePosition()))
+		var sliderRange = 20
 		config.timer = setInterval(function(){
-			 animationAtFrame +=1
+			 
+			 
+			 updateSliderRange(animationAtFrame, animationAtFrame+sliderRange)
 			 heatmapInstance.setData(data[animationAtFrame]);
+			 animationAtFrame +=1
+			 // updateHeatmap()
 			 if(animationAtFrame==size-1){
 			 	console.log("stop")
 				 timelineControlStop()
 			 }
-		 }, 20);
+		 }, 2);
 		 
 		 if(animationAtFrame == size){
 			 timelineControlStop
