@@ -210,11 +210,11 @@ function initTimeLine(){
 	var timeline = d3.select("#timeline").append("svg").attr("width",width)
 	var xScale = config.timeline.xScale
 	
-	var xAxis = d3.svg.axis().scale(xScale).tickSize(1).ticks(16).tickFormat(d3.format("d"))
+	var xAxis = d3.svg.axis().scale(xScale)//.tickSize(1)//.ticks(16).tickFormat(d3.format("d"))
 
 	timeline.append("g")
 		//.attr("transform", "translate(0," + (height) + ")")
-		.call(xAxis);
+		//.call(xAxis);
 	
 	var timelineBar = timeline
 		.append("rect")
