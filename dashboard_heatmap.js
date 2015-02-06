@@ -4,7 +4,7 @@ var config = {
 		width:1000,
 		height:100,
 		margin:20,
-		xScale:d3.scale.linear().domain([0,2000]).range([20,980]),
+		xScale:d3.scale.linear().domain([0,4000]).range([20,980]),
 		barWidth:10,
 		sliderWidth:20
 	}
@@ -33,6 +33,7 @@ var heatmapInstance = h337.create({
        '.95': '#aaa',
        '1': '#000'
      },
+	 radius:20,
 	 maxOpacity: .9,
 	 minOpacity: .1
   });
@@ -42,10 +43,12 @@ function dataDidLoad(error,data1,data2,data3,data4) {
 	$("#timeline-controls .stop").hide()
 	initTimeLine()
 	
-	var allInterval = data1.values.length-1
-	var allData = {}
+	//var allInterval = data1.values.length-1
 	
-	var joinedData = data1.values.concat(data2.values)
+	var allData = {}
+	var allInterval = 3000
+	var joinedData = data1.values.concat(data2.values).concat(data3.values)
+	
 	var currentData = table.filter(table.group(joinedData,["frame"]),function(list,frame){
 		frame = parseInt(frame)
 		return(frame >= 0 && frame <= allInterval )
@@ -54,7 +57,6 @@ function dataDidLoad(error,data1,data2,data3,data4) {
 	
 	
 	allInOneInterval = formatData(currentData,allData,allInterval-1)
-	allInOneInterval = formatData(data2,allData,data2.values.length-1)
 	//allInOneInterval = formatData(data3,allData,data3.values.length-1)
 	//console.log(allData)
 	heatmapInstance.setData(allInOneInterval[0]);
@@ -143,48 +145,46 @@ function formatData(data, newData,interval){
 	//console.log(data)
 	for(var frame = 0; frame + interval < totalLength; frame++){
 		
+		
 		if(newData[frame]==undefined){
 			newData[frame] = {}
 		//	console.log(newData[frame])
 			newData[frame]["data"]=[]
-		//	console.log(newData)
-			var existingCoordinates = []
+		//	console.log(newData)			
 			for(var i =1; i < interval; i++){
 				var currentFrame = parseInt(frame)+i
 				//console.log(data[20])
 				var x = data[currentFrame].x
 				var y = data[currentFrame].y
-				newData[frame]["data"].push({"x":x, "y":y})
+				newData[frame]["data"].push({"x":x,"y":y})
 			}
 		}else{
 			for(var i =1; i < interval; i++){
 				var currentFrame = parseInt(frame)+i
 				var x = data[currentFrame][0].x
 				var y = data[currentFrame][0].y
-				newData[frame]["data"].push({"x":x, "y":y})
+				newData[frame]["data"].push({"x":x,"y":y})
 			}
 		}
+		
+		
+		//counter = {}
+		//newData[frame]["data"].forEach(function(obj){
+		//	var key = JSON.stringify(obj)
+		//	counter[key] = (counter[key] || 0)+1
+		//})
+		//var outputData = []
+		//outputData[0]=[]
+		//outputData[0]["data"]=[]
+		//for (var key in counter){
+		//	var value = counter[key]
+		//	var x =parseInt(key.split(",")[0].replace("[",""))
+		//	var y = parseInt(key.split(",")[1].replace("]",""))
+		//	outputData[0]["data"].push({"x":x,"y":y,"value":value})
+		//}
+		
 	}
-	//console.log(newData)
-	//	jQuery.each(data,function(i,d){
-	//			d["min"] = 0
-	//			d["max"] = 100
-	//			if(newData[frame] == undefined){
-	//				newData[frame]={}
-	//				newData[frame]["data"] = []
-	//				newData[frame]["data"].push({"x":d.x, "y":d.y, "max":10,"min":0})
-	//			}else{
-	//				newData[frame]["data"].push({"x":d.x, "y":d.y,"max":10,"min":0})
-	//			}
-	//			
-	//			if(i%interval == 0){
-	//				frame +=1
-	//			}
-	//			
-	//			d["data"] = [{"x":d.x, "y":d.y,"value":d.value}]
-	//			//console.log(d)
-	//	
-	//	})
+	//console.log(outputData)
 	return newData
 }
 
@@ -231,8 +231,8 @@ function initTimeLine(){
 		.attr("y", 20)
 		.attr("width", width)
 		.attr("height", 20)
-		.attr("fill", "#fff")
-		.attr("opacity", 0.1)
+		.attr("fill", "#000")
+		.attr("opacity", 0.3)
 		.call(d3.behavior.drag()
 			.on("dragstart", function() {
 				d3.event.sourceEvent.stopPropagation();
@@ -363,7 +363,7 @@ function animate(data) {
 		$("#timeline-controls .stop").show()
 		
 		var animationAtFrame = Math.floor(config.timeline.xScale.invert(leftHandlePosition()))
-		var sliderRange = 20
+		var sliderRange = 40
 		config.timer = setInterval(function(){
 			 
 			 

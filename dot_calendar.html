@@ -1,0 +1,153 @@
+
+<html>
+<head>
+	<script src="static/javascripts/d3.v3.min.js"></script>
+	<script src="static/javascripts/topojson.v1.min.js"></script>
+	<script src="static/javascripts/jquery.min.js"></script>
+	<script src="static/javascripts/d3.tip.v0.6.3.js"></script>
+	<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+    <script src="http://d3js.org/queue.v1.min.js"></script>
+	<script src="static/javascripts/jquery-ui.min.js"></script>
+	<link rel="stylesheet" href="static/stylesheets/jquery-ui.css" />
+	<link rel="stylesheet" href="static/bootstrap-3.1.1-dist/css/bootstrap.min.css">
+	<script src="static/javascripts/jquery-ui.min.js"></script>
+	<link href="static/bootstrap-3.1.1-dist/css/bootstrap-glyphicons.css" rel="stylesheet">
+	<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+	<link href='http://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css'>
+	<script src="http://d3js.org/topojson.v1.min.js"></script>
+	<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+<style type="text/css">
+body{font-family: Arial, sans-serif;font-size:12px; padding:20px;}
+#title{padding:20px; color:#aaa;font-size:18px; margin-left:20px;}
+#notes{position:absolute; left:600px; top:120px;height:500px;width:300px;border:1px solid #aaa;padding:5px;color:#aaa;}
+.axis path,.axis line {fill: none;stroke:none;shape-rendering: crispEdges;}
+/*.tick line{fill:none;stroke:none;}*/
+.tick text{fill:#aaa;}
+g.journal.active{cursor:pointer;}
+text.label{font-size:12px;cursor:pointer;}
+text.value{font-size:12px;}
+</style>
+</head>
+<body>
+<div id = "title">Material Use Each Week </div>
+<div id = "notes">Rollover chart to see notes</div>
+<script type="text/javascript">
+function truncate(str, maxLength, suffix) {
+	if(str.length > maxLength) {
+		str = str.substring(0, maxLength + 1); 
+		str = str.substring(0, Math.min(str.length, str.lastIndexOf(" ")));
+		str = str + suffix;
+	}
+	return str;
+}
+
+var margin = {top: 20, right: 200, bottom: 0, left: 20},
+	width = 270,
+	height = 750;
+
+var start_year = 1,
+	end_year = 10;
+
+var c = d3.scale.category20c();
+
+var colorDictionary = {
+	"PL":"#4B77DE",
+	"S":"#EEA927",
+	"M":"#E2402A",
+	"L":"#aaa"
+}
+
+var x = d3.scale.linear()
+	.range([0, width]);
+
+var xAxis = d3.svg.axis()
+	.scale(x)
+	.orient("top");
+
+var formatYears = d3.format("0000");
+xAxis.tickFormat(formatYears);
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width + margin.left + margin.right)
+	.attr("height", height + margin.top + margin.bottom)
+	.style("margin-left", margin.left + "px")
+	.append("g")
+	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// var dataset = [[ [2002, 8], [2003, 1], [2004, 1], [2005, 1], [2006, 3], [2007, 3], [2009, 3], [2013, 3]], [ [2004, 5], [2005, 1], [2006, 2], [2010, 20], [2011, 3] ] ,[ [2001, 5], [2005, 15], [2006, 2], [2010, 20], [2012, 25] ]];
+// var dataset = [ [2001, 5], [2005, 15], [2006, 2], [2010, 20], [2012, 25] ];
+
+d3.json("data/dotcalendar_testdata.json", function(data) {
+	x.domain([start_year, end_year]);
+	var xScale = d3.scale.linear()
+		.domain([start_year, end_year])
+		.range([0, width]);
+
+	svg.append("g")
+		.attr("class", "x axis")
+		.attr("transform", "translate(0," + 0 + ")")
+		.call(xAxis);
+
+	for (var j = 0; j < data.length; j++) {
+		var g = svg.append("g").attr("class","journal");
+		var section = data[j].section
+		var circles = g.selectAll("circle")
+			.data(data[j]['articles'])
+			.enter()
+			.append("circle");
+
+		var text = g.selectAll("text")
+			.data(data[j]['articles'])
+			.enter()
+			.append("text");
+
+		var rScale = d3.scale.linear()
+			.domain([0, d3.max(data[j]['articles'], function(d) { return d[1]; })])
+			.range([2, 9]);
+
+		circles
+			.attr("cx", function(d, i) { return xScale(d[0]); })
+			.attr("cy", j*30+20)
+			.attr("r", function(d) { return rScale(d[1]); })
+			.style("fill", function(d) { return colorDictionary[section]; })
+			.on("mouseover", function(d){
+				
+				d3.select("#notes").html("student spent "+d[1]+" hours on material in week "+d[0]+"\<br/> ... details and notes for that week and that material")
+			});
+
+		text
+			.attr("y", j*30+25)
+			.attr("x",function(d, i) { return xScale(d[0])-5; })
+			.attr("class","value")
+			.text(function(d){ return d[1]; })
+			.style("fill", function(d) { return colorDictionary[section]; })
+			.style("display","none");
+
+		g.append("text")
+			.attr("y", j*30+25)
+			.attr("x",width+20)
+			.attr("class","label")
+			.text(truncate(data[j]['name'],30,"..."))
+			.style("fill", function(d) { return colorDictionary[section]; })
+			.on("mouseover", mouseover)
+			.on("mouseout", mouseout);
+	};
+
+	function mouseover(p) {
+		var g = d3.select(this).node().parentNode;
+		d3.select(g).selectAll("circle").style("display","none");
+		d3.select(g).selectAll("text.value").style("display","block");
+		d3.select("#notes").html("rolling over words shows general material explaination")
+	}
+
+	function mouseout(p) {
+		var g = d3.select(this).node().parentNode;
+		d3.select(g).selectAll("circle").style("display","block");
+		d3.select(g).selectAll("text.value").style("display","none");
+	}
+});
+
+</script>
+
+</body>
+</html>
